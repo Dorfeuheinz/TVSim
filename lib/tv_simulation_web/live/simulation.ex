@@ -2,6 +2,7 @@ defmodule TvSimulationWeb.SimulationLive do
   @moduledoc false
   use TvSimulationWeb, :live_view
   require Logger
+  alias TvSimulation.{Simulation, Simulator}
 
   @impl true
   def render(assigns) do
@@ -31,7 +32,7 @@ defmodule TvSimulationWeb.SimulationLive do
       </.simple_form>
 
       <p class="border p-4 italic rounded-lg">
-        Answer to the question should appear here
+
       </p>
     </div>
     """
@@ -46,6 +47,7 @@ defmodule TvSimulationWeb.SimulationLive do
       # these can be hardcoded for the purpose of take-home assignment
       |> assign(:simulation_participants, 100)
       |> assign(:simulation_channels, 5)
+      |> assign(:response, nil)
 
     {:ok, socket}
   end
@@ -56,8 +58,42 @@ defmodule TvSimulationWeb.SimulationLive do
   end
 
   @impl true
-  def handle_event("save", %{"form" => _params}, socket) do
-    {:noreply, put_flash(socket, :error, "It's your task to implement it!")}
+  def handle_event("save", %{"form" => %{"question" => question}}, socket) do
+    Logger.info([Simulator.get_stats()])
+
+    data = Simulator.get_stats()
+    response = case Instructor.chat_completion(
+      model: "llama3-70b-8192",
+      response_model: Simulation,
+      max_retries: 3,
+      messages: [
+        %{
+          role: "user",
+          content: """
+          Heres the context you need to refer to answer questions-
+          format: channel_name: duration_of_user1, duration_of_user2, ....
+          none isnt a channel, rather it means user is waiting for the tv to switch on
+          ```
+          #{data}
+          ```
+
+          The question is:
+          ```
+          #{question}
+          ```
+          Reply in natural language
+          """
+        }
+      ]
+    ) do
+
+      {:ok, response} -> response
+      {:error, error} -> error
+
+    end
+    # %TvSimulation.Simulation{user_id: user_id, channel: channel, duration: duration} = response
+    Logger.info(response)
+    {:noreply, assign(socket, :response, response)}
   end
 
   defp get_form(params, action \\ :ignore) do
@@ -75,4 +111,9 @@ defmodule TvSimulationWeb.SimulationLive do
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required([:question])
   end
+
+  # defp update_behaviour do
+
+  # end
+
 end

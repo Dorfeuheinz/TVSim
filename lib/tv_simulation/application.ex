@@ -4,6 +4,7 @@ defmodule TvSimulation.Application do
   @moduledoc false
 
   use Application
+  alias TvSimulation.Simulator
 
   @impl true
   def start(_type, _args) do
@@ -14,7 +15,8 @@ defmodule TvSimulation.Application do
       # Start a worker by calling: TvSimulation.Worker.start_link(arg)
       # {TvSimulation.Worker, arg},
       # Start to serve requests, typically the last entry
-      TvSimulationWeb.Endpoint
+      TvSimulationWeb.Endpoint,
+      Simulator
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
